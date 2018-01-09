@@ -1,0 +1,21 @@
+<html>
+<head>
+<title>ctemplate示例模板</title>
+</head>
+
+<body>
+    {{table1_name}}
+    <table>
+        {{#TABLE1}}
+        <tr>
+            <td>{{field1}}</td>
+            <td>{{field2}}</td>
+            <td>{{field3}}</td>
+ {{#TABLE2}}<tr>
+				<td>{{field4}}</td>
+			</tr>{{/TABLE2}}
+        </tr>
+        {{/TABLE1}}
+    </table>
+</body>
+</html>

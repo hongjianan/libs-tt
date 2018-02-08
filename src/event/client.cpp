@@ -21,10 +21,11 @@
 static const int SERVER_PORT = 12345;
 
 static TrafficStat*	g_trafficStat;
-uint8_t*	 	g_message;
-int 			g_length;
-int 			g_packets_pers;
-int 			g_ratio;
+static uint8_t*	 	g_message;
+static int 			g_length;
+static int 			g_packets_pers;
+static int 			g_ratio;
+static int          g_pid;
 static struct bufferevent* g_client;
 static struct ev_token_bucket_cfg* g_rate_cfg;
 
@@ -52,6 +53,7 @@ int ClientTest_client(int argc, const char* argv[])
 
 	printf("argc: %s %d %d %fKBS\n", server_ip, server_port, g_length, g_length * g_packets_pers / 1024);
 
+	g_pid = getpid();
 	/* init stat */
 	struct timeval tv;
 	evutil_gettimeofday(&tv, NULL);

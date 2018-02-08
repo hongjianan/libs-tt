@@ -41,4 +41,5 @@ add_executable(${PROJECT_NAME}  ${SOURCE_FILES})
 ########## 链接库  ##########
 ##### 库路径  #####
 ##### 链接库  #####
-#target_link_libraries(${PROJECT_NAME}  pthread  rt)
+target_link_libraries(${PROJECT_NAME}  ssl  crypto)
+

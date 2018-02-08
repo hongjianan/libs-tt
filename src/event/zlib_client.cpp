@@ -162,6 +162,7 @@ static void conn_eventcb(struct bufferevent *bev, short events, void *user_data)
         printf("Connection success. Start to send message\n");
 
         if (g_zlib_flag) {
+            printf("zlib open\n");
             z_stream* z_output = (z_stream*)calloc(sizeof(*z_output), 1);
             if (deflateInit(z_output, Z_DEFAULT_COMPRESSION)) {
                 printf("deflateInit error\n");

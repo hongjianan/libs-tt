@@ -3,6 +3,6 @@
 
 int main(int argc, const char* argv[])
 {
-    CCALL_TEST(Test);
+    CCALL_TEST(Md5);
     return 0;
 }

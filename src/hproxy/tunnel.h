@@ -14,6 +14,9 @@
 #include <sys/socket.h>
 #include <event2/event.h>
 
+#define TUNNEL_CLIENT_IDX	(0)
+#define TUNNEL_SERVER_IDX	(1)
+
 enum tunnel_type
 {
     TUNNEL_TYPE_FILE = 0,

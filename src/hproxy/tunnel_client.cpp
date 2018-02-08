@@ -26,7 +26,7 @@ extern struct event_base*  g_evbase;
 
 void tc_conn_readcb(struct bufferevent *bev, void *arg)
 {
-    LOG_DBG("conn_readcb bev:%p arg:%p\n", bev, arg);
+//    LOG_DBG("conn_readcb bev:%p arg:%p\n", bev, arg);
 
     struct tunnel* tunnel = (struct tunnel*)arg;
     struct evbuffer *ebuf = bufferevent_get_input(bev);
@@ -34,7 +34,7 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
     switch (tunnel->status)
     {
     case TUNNEL_INIT:
-        buf_len = evbuffer_get_length(ebuf);
+    	buf_len = evbuffer_get_length(ebuf);
         evbuffer_copyout(ebuf, &pack_len, sizeof(pack_len));
         if (pack_len > buf_len) {
             LOG_DBG("message uncomplete pack_len:%d buf_len:%d\n", pack_len, buf_len);
@@ -50,8 +50,6 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
             struct setup_tunnel_rsp rsp;
             evbuffer_remove(ebuf, &req, sizeof(req));
             handler_setup_tunnel_req(tunnel, &req, &rsp);
-            bufferevent_write(bev, &rsp, sizeof(rsp));
-            g_trafficStat->rx_bytes_period += sizeof(rsp);
             break;
 
         default:
@@ -65,12 +63,23 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
     case TUNNEL_CLIENT_BUILD_OK:
         break;
 
+    case TUNNEL_COMPLETED_OK:
+    {
+    	buf_len = evbuffer_get_length(ebuf);
+    	struct evbuffer *outbuf = bufferevent_get_output(tunnel->bev[TUNNEL_SERVER_IDX]);
+    	evbuffer_add_buffer(outbuf, ebuf);
+//    	LOG_DBG("after send input length:%d\n", evbuffer_get_length(ebuf));
+
+    	g_trafficStat->rx_bytes_period += buf_len;
+    	g_trafficStat->tx_bytes_period += buf_len;
+    }
+    	break;
+
     default:
         LOG_ERR("conn_readcb error status:%d\n", tunnel->status);
         break;
     }
     
-
     // g_trafficStat->rx_bytes_period += length;
 }
 
@@ -119,6 +128,7 @@ int handler_setup_tunnel_req(struct tunnel* tunnel, struct setup_tunnel_req* req
 
     struct bufferevent *bev = bufferevent_socket_new(g_evbase, -1, BEV_OPT_CLOSE_ON_FREE);
     bufferevent_setcb(bev, ts_conn_readcb, ts_conn_writecb, ts_conn_eventcb, tunnel);
+    bufferevent_enable(bev, EV_READ | EV_WRITE);
     
     if (0 < bufferevent_socket_connect(bev, (struct sockaddr*)&sin, sizeof(sin))) {
         bufferevent_free(bev);
@@ -126,6 +136,8 @@ int handler_setup_tunnel_req(struct tunnel* tunnel, struct setup_tunnel_req* req
     }
 
     tunnel->bev[1] = bev;
+
+    rsp->ret_code = 0x11001100;
 
     return 0;
 }

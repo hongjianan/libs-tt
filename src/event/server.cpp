@@ -12,6 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <assert.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -26,10 +27,15 @@
 #include "traffic_stat.h"
 
 
-static const int SERVER_PORT = 12345;
+static int g_server_port = 12345;
 static TrafficStat *g_trafficStat;
+static int             g_ratio;
+static struct ev_token_bucket_cfg* g_rate_cfg;
+static struct bufferevent_rate_limit_group *g_rate_group;
 
 static struct event* create_timer(struct event_base *base, int period);
+static int create_limit_group(struct event_base *base, int ratio, struct ev_token_bucket_cfg **cfg,
+        struct bufferevent_rate_limit_group **group);
 static void timer_cb(evutil_socket_t fd, short event, void *arg);
 static void listener_cb(struct evconnlistener *, evutil_socket_t, struct sockaddr *, int socklen, void *);
 static void conn_readcb(struct bufferevent *, void *);
@@ -39,11 +45,13 @@ static void signal_cb(evutil_socket_t, short, void *);
 
 int ServerTest_server(int argc, const char* argv[])
 {
-	int server_port = SERVER_PORT;
-	if (argc == 2)
-	{
-		server_port = atoi(argv[1]);
-	}
+    if (3 != argc) {
+        printf("usage: port ratio_KPBS\n");
+        return -1;
+    }
+
+    g_server_port   = atoi(argv[1]);
+    g_ratio         = atoi(argv[2]);
 
 	struct event_base *base;
 	struct evconnlistener *listener;
@@ -66,7 +74,7 @@ int ServerTest_server(int argc, const char* argv[])
 
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-	sin.sin_port = htons(server_port);
+	sin.sin_port = htons(g_server_port);
 
 	listener = evconnlistener_new_bind(base, listener_cb, (void *)base,
 	    LEV_OPT_REUSEABLE | LEV_OPT_CLOSE_ON_FREE, -1,
@@ -83,6 +91,8 @@ int ServerTest_server(int argc, const char* argv[])
 		fprintf(stderr, "Could not create/add a signal event!\n");
 		return 1;
 	}
+
+	create_limit_group(base, g_ratio, &g_rate_cfg, &g_rate_group);
 
 	event_base_dispatch(base);
 
@@ -107,6 +117,21 @@ static struct event* create_timer(struct event_base *base, int period)
 
 	return timer;
 }
+
+static int create_limit_group(struct event_base *base, int ratio, struct ev_token_bucket_cfg **cfg,
+        struct bufferevent_rate_limit_group **group)
+{
+    *cfg = ev_token_bucket_cfg_new(ratio, ratio * 4, ratio, ratio * 4, NULL);
+    *group = bufferevent_rate_limit_group_new(base, *cfg);
+    if (*cfg == NULL || *group == NULL) {
+        printf("create_limit_group error\n");
+        return -1;
+    }
+    bufferevent_rate_limit_group_set_min_share(*group, 1500);
+
+    return 0;
+}
+
 
 static void timer_cb(evutil_socket_t fd, short event, void *arg)
 {
@@ -134,6 +159,8 @@ static void listener_cb(struct evconnlistener *listener, evutil_socket_t fd,
 		event_base_loopbreak(base);
 		return;
 	}
+	bufferevent_add_to_rate_limit_group(bev, g_rate_group);
+
 	bufferevent_setcb(bev, conn_readcb, conn_writecb, conn_eventcb, NULL);
 	// bufferevent_enable(bev, EV_WRITE);
 	bufferevent_enable(bev, EV_READ);

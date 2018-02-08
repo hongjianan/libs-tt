@@ -15,6 +15,8 @@
 
 #include "log.h"
 #include "traffic_stat.h"
+#include "proto.h"
+#include "header.h"
 #include "proxy_cfg.h"
 #include "tunnel_mgr.h"
 #include "tunnel.h"
@@ -55,6 +57,22 @@ void ts_conn_eventcb(struct bufferevent *bev, short events, void *arg)
 
     if (events & BEV_EVENT_CONNECTED) {
         LOG_INF("Connection server success.\n");
+        tunnel->status = TUNNEL_SERVER_BUILD_OK;
+
+		struct setup_tunnel_rsp rsp;
+        struct message_header header;
+		header.length = sizeof(header) + sizeof(rsp);
+		header.magic = HEADER_MAGIC;
+		header.type = setup_tunnel_rsp_pid;
+		rsp.ret_code = 0x11001100;
+
+		uint8_t msg[1024];
+		memcpy(msg, &header, sizeof(header));
+		memcpy(msg + sizeof(header), &rsp, sizeof(rsp));
+
+		bufferevent_write(tunnel->bev[TUNNEL_CLIENT_IDX], msg, header.length);
+		tunnel->status = TUNNEL_COMPLETED_OK;
+		g_trafficStat->tx_bytes_period += header.length;
 
         return;
     } else if (events & BEV_EVENT_EOF) {
@@ -64,8 +82,10 @@ void ts_conn_eventcb(struct bufferevent *bev, short events, void *arg)
     }
 
     // TODO:: don't cut client connection
+    LOG_WAR("release tunnel:%p\n", tunnel);
+
     bufferevent_free(bev);
-    bufferevent_free(tunnel->bev[1]);
+    bufferevent_free(tunnel->bev[0]);
     /* None of the other events can happen here, since we haven't enabled
      * timeouts */
     g_tunnel_mgr.tunnels.erase(tunnel->bev[0]);

@@ -13,9 +13,24 @@
 #include "tunnel.h"
 
 //
+struct auth_tunnel_req
+{
+#define auth_tunnel_req_pid   (0x0001)
+    uint32_t    user_id;
+    uint32_t    password;
+};
+
+//
+struct auth_tunnel_rsp
+{
+#define auth_tunnel_rsp_pid   (0x0002)
+    uint32_t    ret_code;
+};
+
+//
 struct setup_tunnel_req
 {
-#define setup_tunnel_req_pid   (0x0001)
+#define setup_tunnel_req_pid   (0x0011)
     uint8_t     tunnel_type;
     uint16_t    server_port;
     uint32_t    server_ip;
@@ -26,7 +41,7 @@ struct setup_tunnel_req
 //
 struct setup_tunnel_rsp
 {
-#define setup_tunnel_rsp_pid   (0x0002)
+#define setup_tunnel_rsp_pid   (0x0012)
     uint32_t    ret_code;
 };
 
@@ -34,27 +49,27 @@ struct setup_tunnel_rsp
 //
 struct set_flow_speed_req
 {
-#define set_flow_speed_req_pid   (0x0011)
+#define set_flow_speed_req_pid   (0x0021)
     struct flow_speed_cfg   cfg;
 };
 
 //
 struct set_flow_speed_rsp
 {
-#define set_flow_speed_rsp_pid   (0x0012)
+#define set_flow_speed_rsp_pid   (0x0022)
     uint32_t    ret_code;
 };
 
 
 struct get_flow_speed_req
 {
-#define get_flow_speed_req_pid   (0x0015)
+#define get_flow_speed_req_pid   (0x0025)
 };
 
 //
 struct get_flow_speed_rsp
 {
-#define get_flow_speed_rsp_pid   (0x0016)
+#define get_flow_speed_rsp_pid   (0x0026)
     struct flow_speed_cfg   cfg;
 };
 

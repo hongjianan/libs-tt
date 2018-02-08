@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <arpa/inet.h>
+#include <sys/time.h>
 
 #include <event2/bufferevent.h>
 #include <event2/buffer.h>
@@ -21,18 +22,20 @@ extern char*           g_server_ip;
 extern uint16_t        g_server_port;
 extern TrafficStat*    g_trafficStat;
 extern uint8_t*        g_message;
+extern int				g_length;
+enum tunnel_status		g_tunnel_status;
 
 void tc_conn_readcb(struct bufferevent *bev, void *arg)
 {
     LOG_DBG("conn_readcb bev:%p arg:%p\n", bev, arg);
 
-    // struct tunnel* tunnel = (struct tunnel*)arg;
     struct evbuffer *ebuf = bufferevent_get_input(bev);
-    // switch (tunnel->status)
-    // {
-    // case TUNNEL_INIT:
-        int buf_len = evbuffer_get_length(ebuf);
-        int pack_len;
+    int buf_len = evbuffer_get_length(ebuf);
+    int pack_len = 0;
+
+	switch (g_tunnel_status)
+	{
+	case TUNNEL_INIT:
         evbuffer_copyout(ebuf, &pack_len, sizeof(pack_len));
         if (pack_len > buf_len) {
             LOG_DBG("message uncomplete pack_len:%d buf_len:%d\n", pack_len, buf_len);
@@ -44,11 +47,17 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
         switch (header.type)
         {
         case setup_tunnel_rsp_pid:
+        	LOG_INF("read setup_tunnel_rsp_pid\n");
             struct setup_tunnel_rsp rsp;
             evbuffer_remove(ebuf, &rsp, sizeof(rsp));
             handler_setup_tunnel_rsp(&rsp);
             
             g_trafficStat->rx_bytes_period += sizeof(rsp);
+
+            bufferevent_write(bev, g_message, g_length);
+            g_trafficStat->tx_bytes_period += g_length;
+			g_trafficStat->tx_packets_period++;
+
             break;
 
         default:
@@ -57,12 +66,12 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
             break;
         }
         
-        // break;
-// 
-    // default:
-    //     LOG_ERR("conn_readcb error status:%d\n", tunnel->status);
-    //     break;
-    // }
+        break;
+
+	default:
+    	 LOG_ERR("conn_readcb error status:%d\n", g_tunnel_status);
+         break;
+	}
     
     g_trafficStat->rx_bytes_period += pack_len;
     g_trafficStat->rx_packets_period ++;
@@ -71,6 +80,15 @@ void tc_conn_readcb(struct bufferevent *bev, void *arg)
 
 void tc_conn_writecb(struct bufferevent *bev, void *arg)
 {
+	struct evbuffer *output = bufferevent_get_output(bev);
+	if (evbuffer_get_length(output) == 0) {
+		bufferevent_write(bev, g_message, g_length);
+		g_trafficStat->tx_bytes_period += g_length;
+		g_trafficStat->tx_packets_period++;
+//		LOG_DBG("write complete.\n");
+	} else {
+		//printf("write left:%d\n", evbuffer_get_length(output));
+	}
 }
 
 void tc_conn_eventcb(struct bufferevent *bev, short events, void *arg)
@@ -79,7 +97,7 @@ void tc_conn_eventcb(struct bufferevent *bev, short events, void *arg)
 
     if (events & BEV_EVENT_CONNECTED) {
         LOG_INF("Connection server success.\n");
-        struct setup_tunnel_req req
+        struct setup_tunnel_req req;
         do_setup_tunnel_req(&req, g_server_ip, g_server_port);
         struct message_header header;
         header.length = sizeof(header) + sizeof(req);
@@ -100,7 +118,8 @@ void tc_conn_eventcb(struct bufferevent *bev, short events, void *arg)
     }
 
     bufferevent_free(bev);
-    event_base_loopexit(g_evbase, NULL);
+    struct timeval tv = {1, 0};
+    event_base_loopexit(g_evbase, &tv);
 }
 
 
@@ -114,14 +133,15 @@ int do_setup_tunnel_req(struct setup_tunnel_req* req, const char* ip, uint16_t p
     req->vmid      = 2222;
     req->client_id = 1111;
 
+    g_tunnel_status = TUNNEL_INIT;
+
     return 0;
 }
 
 
 void handler_setup_tunnel_rsp(struct setup_tunnel_rsp* rsp)
 {
-    
-
+    LOG_INF("setup_tunnel_rsp ret_code:%d\n", rsp->ret_code);
     return;
 }
 

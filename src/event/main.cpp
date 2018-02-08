@@ -6,8 +6,8 @@ int main(int argc, const char* argv[])
     // CCALL_TEST(EvbufferTest);
     // CCALL_TEST(TimerTest);
 
-    CCALL_TEST(ClientTest);
-//  CCALL_TEST(ServerTest);
+//    CCALL_TEST(ClientTest);
+	CCALL_TEST(ServerTest);
 
 //    CCALL_TEST(ServerSSLTest);
 //    CCALL_TEST(ClientSSLTest);

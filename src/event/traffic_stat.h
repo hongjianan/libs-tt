@@ -42,7 +42,7 @@ public:
 		begin_time_period = newtime;
 
         printf("elapsed time:%lf, rx_bytes:%llu rx_packets:%llu, tx_bytes:%llu tx_packets:%llu\n",
-            elapsed, rx_bytes_period, rx_packets_period, tx_bytes_period, tx_packets_period);
+                elapsed, rx_bytes_period, rx_packets_period, tx_bytes_period, tx_packets_period);
 
         double rx_speed = 0, tx_speed = 0;
         if (elapsed > 0.000001)
@@ -51,7 +51,8 @@ public:
             tx_speed = tx_bytes_period / elapsed / bps;
         }
 
-        printf("rx_speed:%.3f , tx_speed:%.3f %s\n", rx_speed, tx_speed, (bps == KBPS) ? "KBPS" : "MBPS");
+        printf("rx_speed:%.3f , tx_speed:%.3f %s\n",
+                rx_speed, tx_speed, (bps == KBPS) ? "KBPS" : "MBPS");
 
         calc_total();
         clear_period();
@@ -66,7 +67,7 @@ public:
         double elapsed = difference.tv_sec + (difference.tv_usec / 1.0e6);
 
         printf("total elapsed time:%lf, rx_bytes:%llu rx_packets:%llu, tx_bytes:%llu tx_packets:%llu\n",
-            elapsed, rx_bytes_total + rx_bytes_period, rx_packets_total + rx_packets_period,
+                elapsed, rx_bytes_total + rx_bytes_period, rx_packets_total + rx_packets_period,
             tx_bytes_total + tx_bytes_period, tx_packets_total + tx_packets_period);
     }
 

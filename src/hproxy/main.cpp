@@ -64,7 +64,7 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    struct event* timer = create_timer(g_evbase, 60);
+    struct event* timer = create_timer(g_evbase, 10);
 
     memset(&sin, 0, sizeof(sin));
     sin.sin_family = AF_INET;

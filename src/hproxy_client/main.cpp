@@ -3,7 +3,7 @@
  *
  *  
  *
- *  Created on: 2018年1月7日
+ *  Created on: 2018骞�1鏈�7鏃�
  *      Author: Hong
  */
 
@@ -53,8 +53,8 @@ int main(int argc, char* argv[])
         fprintf(stderr, "usage: ip port proxy_ip proxy_port length packets_pers\n");
         return -1;
     }
-    char* server_ip = argv[1];
-    int   server_port = atoi(argv[2]);
+    g_server_ip = argv[1];
+    g_server_port = atoi(argv[2]);
     g_proxy_ip = argv[3];
     g_proxy_port = atoi(argv[4]);
     g_length = atoi(argv[5]);
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
     g_ratio = g_length * g_packets_pers;
 
     printf("argc: %s:%d %s:%d pack_len:%d rate:%fKBS\n",
-        server_ip, server_port, g_proxy_ip, g_proxy_port, g_length, g_length * g_packets_pers / 1024);
+    		g_server_ip, g_server_port, g_proxy_ip, g_proxy_port, g_length, g_length * g_packets_pers / 1024);
 
     /* init stat */
     struct timeval tv;
@@ -77,7 +77,7 @@ int main(int argc, char* argv[])
 
     g_message = build_message(g_length);
 
-    struct event* timer = create_timer(g_evbase, 10);    // period 5s
+    struct event* timer = create_timer(g_evbase, 60);    // period 5s
 
     // create_client
     g_client = create_client(g_evbase, g_proxy_ip, g_proxy_port);
@@ -139,7 +139,8 @@ static struct bufferevent* create_client(struct event_base *base, const char* ip
 
     struct bufferevent *bev = bufferevent_socket_new(base, -1, BEV_OPT_CLOSE_ON_FREE);
     bufferevent_setcb(bev, tc_conn_readcb, tc_conn_writecb, tc_conn_eventcb, NULL);
-    
+    bufferevent_enable(bev, EV_READ | EV_WRITE);
+
     if (0 < bufferevent_socket_connect(bev, (struct sockaddr *)&sin, sizeof(sin))) {
         bufferevent_free(bev);
         return NULL;
